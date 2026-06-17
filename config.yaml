@@ -1,0 +1,54 @@
+# JK-PB logger config
+serial:
+  port: /dev/ttyUSB0      # Windows test: COM3 ; Raspberry Pi: /dev/ttyUSB0
+  baud: 115200
+
+bank:
+  cell_count: 16          # 16S LiFePO4
+  # START with ONE battery: set its DIP address here, e.g. [1].
+  # Expand to all 16 once the single-pack test works.
+  addresses: [1]          # full bank: [0,1,2,...,15]
+
+# Charge/discharge limits the RPi reports to the Ekrano (DVCC uses these).
+# Per-pack values; for the full bank scale current by pack count if desired.
+# Conservative static limits until the balancer phase.
+limits:
+  max_charge_voltage: 55.2      # V  (16S LFP ~3.45V/cell)
+  max_charge_current: 50        # A
+  max_discharge_current: 100    # A
+
+# Venus OS dbus-mqtt-battery target. Fill vrm_id with the Ekrano portal ID
+# (Settings > VRM online portal > VRM Portal ID).
+mqtt:
+  host: 192.168.1.50      # Ekrano GX LAN IP (set yours)
+  port: 1883
+  vrm_id: REPLACE_WITH_VRM_PORTAL_ID
+  instance: 1
+  username: ""
+  password: ""
+
+poll:
+  interval_s: 5.0         # full-bank poll period
+  retries: 1              # extra attempts per pack on bad/no frame
+
+storage:
+  db: data/bms.sqlite
+  csv: data/bms.csv       # set "" to disable CSV
+
+# Smart per-pack balancer (Phase 3). DISABLED + writes blocked by default.
+# Decisions are always computed and shown; they are only APPLIED in LIVE mode
+# with BOTH enabled:true AND allow_mosfet_writes:true.
+balancer:
+  enabled: false              # compute + show decisions even when false? -> only recovers; set true to isolate
+  allow_mosfet_writes: false  # ⚠️ keep false until write frame validated on ONE pack
+  isolate_delta_mv: 60        # pack top cell this far over bank avg -> charge-only
+  recover_delta_mv: 20        # back to normal once within this
+  max_switch_current_a: 5.0   # only switch MOSFET when |bank current| under this (no switching under load)
+  max_isolated_packs: 1       # never isolate more than this at once
+  min_cell_mv: 2900           # never stop discharge on a pack with a cell this low
+
+# Simulation bank for `--simulate` (no hardware). One pack made imbalanced.
+sim:
+  addresses: [0,1,2,3]
+  imbalanced_addr: 3
+  bank_current_a: 2.0         # low current -> balancer allowed to switch
