@@ -6,3 +6,4 @@ data/
 __pycache__/
 *.pyc
 *.log
+PAPER_CONTEXT.md
